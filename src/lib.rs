@@ -1,7 +1,6 @@
 pub mod problem;
 pub mod reduction;
 pub mod algorithm;
-pub mod primitives;
 pub mod program;
 
 

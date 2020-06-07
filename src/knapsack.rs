@@ -2,6 +2,7 @@ use crate::problem::OptProblemKind;
 use std::ops::Add;
 use std::iter::Sum;
 
+#[derive(Clone, Debug)]
 struct Instance<I> where I : Item {
     items: Vec<I>,
     size: I::Weight
@@ -22,6 +23,7 @@ impl <I> OptProblemKind for Instance<I> where I : Item {
     type Cost = I::Cost;
 }
 
+#[derive(Clone, Debug)]
 struct Solution<I> where I : Item  {
     packed_items: Vec<I>,
 }
@@ -66,6 +68,7 @@ impl <T> From<(Vec<(T,T)>, T)> for Instance<DefaultItem<T>> where T: Add + Sum +
         }
     }
 }
+
 impl <T> From<(T, T)> for DefaultItem<T> where T: Add + Sum + PartialEq + Copy {
     fn from(input: (T, T)) -> Self {
         DefaultItem {
