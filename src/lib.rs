@@ -3,7 +3,6 @@ pub mod reduction;
 pub mod algorithm;
 pub mod program;
 
-
 pub mod knapsack;
 
 #[cfg(test)]

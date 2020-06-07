@@ -4,6 +4,7 @@ use crate::program::{MathProgram, LpSolution, LpSolver};
 use lp_modeler::dsl::*;
 use std::ops::Add;
 use std::iter::Sum;
+use std::fmt::Display;
 
 #[derive(Clone, Debug)]
 struct Instance<I> where I : Item {
@@ -18,6 +19,14 @@ impl <I> Instance<I> where I: Item {
 
     pub fn bag_size(&self) -> &I::Weight {
         &self.size
+    }
+}
+
+impl <I> Display for Instance<I> where I: Item {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Knapsack instance");
+        writeln!(f, "   - size = {}", self.size);
+        writeln!(f, "   - items = {{ {} }}", self.items.iter().map(|item| item.to_string()).collect::<Vec<String>>().join(&", "))
     }
 }
 
@@ -51,23 +60,28 @@ impl <'a, I> Solution<&'a I> where I : Item {
     }
 }
 
-// TODO: Introduce lifetimes and remove Copy
-pub trait Item {
-    type Weight: Add + Sum + PartialEq ;
-    type Cost : Add + Sum + PartialEq ;
+pub trait Item: Display {
+    type Weight: Add + Sum + PartialEq + Display;
+    type Cost : Add + Sum + PartialEq + Display;
 
     fn weight(&self) -> &Self::Weight;
     fn cost(&self) -> &Self::Cost;
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct DefaultItem<T> where T: Add + Sum + PartialEq {
+pub struct DefaultItem<T> where T: Add + Sum + PartialEq + Display {
     cost: T,
     weight: T,
 }
 
+impl <T> Display for DefaultItem<T> where T: Add + Sum + PartialEq + Display {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Item[c = {}, w = {}]", self.cost, self.weight)
+    }
+}
 
-impl <T> Item for DefaultItem<T> where T: Add + Sum + PartialEq  {
+
+impl <T> Item for DefaultItem<T> where T: Add + Sum + PartialEq + Display  {
     type Weight = T;
     type Cost = T;
 
@@ -75,7 +89,7 @@ impl <T> Item for DefaultItem<T> where T: Add + Sum + PartialEq  {
     fn cost(&self) -> &Self::Cost { &self.cost }
 }
 
-impl <T> From<(Vec<(T,T)>, T)> for Instance<DefaultItem<T>> where T: Add + Sum + PartialEq {
+impl <T> From<(Vec<(T,T)>, T)> for Instance<DefaultItem<T>> where T: Add + Sum + PartialEq + Display {
     fn from(input: (Vec<(T,T)>, T)) -> Self {
         let items: Vec<DefaultItem<T>> = input.0.into_iter().map(|(cost, weight)| DefaultItem::from((cost, weight))).collect();
         Instance {
@@ -85,7 +99,7 @@ impl <T> From<(Vec<(T,T)>, T)> for Instance<DefaultItem<T>> where T: Add + Sum +
     }
 }
 
-impl <T> From<(T, T)> for DefaultItem<T> where T: Add + Sum + PartialEq  {
+impl <T> From<(T, T)> for DefaultItem<T> where T: Add + Sum + PartialEq + Display  {
     fn from(input: (T, T)) -> Self {
         DefaultItem {
             cost: input.0,
@@ -93,6 +107,8 @@ impl <T> From<(T, T)> for DefaultItem<T> where T: Add + Sum + PartialEq  {
         }
     }
 }
+
+// Reductions
 
 impl <'a> Reduction<MathProgram> for &'a Instance<DefaultItem<f32>> {
     fn reduce_instance(&self) -> MathProgram {
@@ -145,7 +161,8 @@ mod tests {
 
     #[test]
     fn solving_by_reduction_works() {
-        let instance = &Instance::from((vec![(1.0,2.0),(2.0,3.0),(2.0, 4.0)], 5.0));
+        let instance = &Instance::from((vec![(1.0,2.0),(2.0,3.0),(2.0, 4.0)], 10.0));
+        println!("{}", instance);
         let solution = instance.solve_by_reduction(&LpSolver::CBC);       
         assert!(solution.is_solved());
         let items = solution.as_solution().unwrap();
