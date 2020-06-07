@@ -1,7 +1,9 @@
 pub mod problem;
 pub mod reduction;
-pub mod solver;
+pub mod algorithm;
 pub mod primitives;
+pub mod program;
+
 
 pub mod knapsack;
 

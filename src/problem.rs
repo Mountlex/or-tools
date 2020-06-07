@@ -1,8 +1,13 @@
+use crate::algorithm::Algorithm;
 
-pub trait OptProblemKind {
-    type Solution;
+pub trait OptProblemKind: Sized {
+    type SolutionKind;
     type Cost;
 
-    fn cost(solution: &Self::Solution) -> Self::Cost;
+    fn run<T : Algorithm<Self>>(&self, algorithm: T) -> Self::SolutionKind {
+        algorithm.run(self)
+    }
 }
+
+
 

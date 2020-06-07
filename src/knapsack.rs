@@ -18,12 +18,8 @@ impl <I> Instance<I> where I: Item {
 }
 
 impl <I> OptProblemKind for Instance<I> where I : Item {
-    type Solution = Solution<I>;
+    type SolutionKind = Solution<I>;
     type Cost = I::Cost;
-
-    fn cost(solution: &Self::Solution) -> I::Cost {
-        solution.into_iter().map(|item| *item.cost()).sum()
-    }
 }
 
 struct Solution<I> where I : Item  {

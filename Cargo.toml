@@ -7,3 +7,4 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+lp-modeler = { git = "https://github.com/jcavat/rust-lp-modeler" }
