@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn solving_by_reduction_works() {
-        let instance = &Instance::from((vec![(1.0,2.0),(2.0,3.0),(2.0, 4.0)], 10.0));
+        let instance = &Instance::from((vec![(1.0,2.0),(2.0,3.0),(2.0, 4.0)], 5.0));
         println!("{}", instance);
         let solution = instance.solve_by_reduction(&LpSolver::CBC);       
         assert!(solution.is_solved());
