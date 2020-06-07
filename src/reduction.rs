@@ -1,10 +1,10 @@
-use crate::problem::OptProblemKind;
 use crate::algorithm::Algorithm;
+use crate::problem::OptProblemKind;
 
-
-
-pub trait Reduction<V> : OptProblemKind where V : OptProblemKind {
-
+pub trait Reduction<V>: OptProblemKind
+where
+    V: OptProblemKind,
+{
     fn reduce_instance(&self) -> V;
     fn reduce_solution(&self, solution: &V::SolutionKind) -> Self::SolutionKind;
 
@@ -14,6 +14,3 @@ pub trait Reduction<V> : OptProblemKind where V : OptProblemKind {
         self.reduce_solution(&solution)
     }
 }
-
-
-
