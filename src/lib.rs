@@ -1,9 +1,9 @@
 pub mod algorithm;
+pub mod knapsack;
+pub mod primitives;
 pub mod problem;
 pub mod program;
 pub mod reduction;
-
-pub mod knapsack;
 
 #[cfg(test)]
 mod tests {
