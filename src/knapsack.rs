@@ -16,18 +16,18 @@ impl <I> Instance<I> where I: Item {
         self.items.len()
     }
 
-    pub fn size(&self) -> I::Weight {
-        self.size
+    pub fn bag_size(&self) -> &I::Weight {
+        &self.size
     }
 }
 
-impl <I> OptProblemKind for Instance<I> where I : Item {
-    type SolutionKind = Solution<I>;
+impl <'a, I> OptProblemKind for &'a Instance<I> where I : Item {
+    type SolutionKind = Solution<&'a I>;
     type Cost = I::Cost;
 }
 
 #[derive(Clone, Debug)]
-pub enum Solution<I> where I : Item  {
+pub enum Solution<I> {
     Solved {
         packed_items: Vec<I>,
     },
@@ -35,7 +35,7 @@ pub enum Solution<I> where I : Item  {
     Failed(String)
 }
 
-impl <I> Solution<I> where I : Item {
+impl <'a, I> Solution<&'a I> where I : Item {
     pub fn is_solved(&self) -> bool {
         match self {
             Solution::Solved {..} => true,
@@ -43,7 +43,7 @@ impl <I> Solution<I> where I : Item {
         }
     }
 
-    pub fn as_solution(self) -> Option<Vec<I>> {
+    pub fn as_solution(self) -> Option<Vec<&'a I>> {
         match self {
             Solution::Solved {packed_items} => Some(packed_items),
             _ => None
@@ -53,21 +53,21 @@ impl <I> Solution<I> where I : Item {
 
 // TODO: Introduce lifetimes and remove Copy
 pub trait Item {
-    type Weight: Add + Sum + PartialEq + Copy ;
-    type Cost : Add + Sum + PartialEq + Copy ;
+    type Weight: Add + Sum + PartialEq ;
+    type Cost : Add + Sum + PartialEq ;
 
     fn weight(&self) -> &Self::Weight;
     fn cost(&self) -> &Self::Cost;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct DefaultItem<T> where T: Add + Sum + PartialEq {
     cost: T,
     weight: T,
 }
 
 
-impl <T> Item for DefaultItem<T> where T: Add + Sum + PartialEq + Copy {
+impl <T> Item for DefaultItem<T> where T: Add + Sum + PartialEq  {
     type Weight = T;
     type Cost = T;
 
@@ -75,7 +75,7 @@ impl <T> Item for DefaultItem<T> where T: Add + Sum + PartialEq + Copy {
     fn cost(&self) -> &Self::Cost { &self.cost }
 }
 
-impl <T> From<(Vec<(T,T)>, T)> for Instance<DefaultItem<T>> where T: Add + Sum + PartialEq + Copy {
+impl <T> From<(Vec<(T,T)>, T)> for Instance<DefaultItem<T>> where T: Add + Sum + PartialEq {
     fn from(input: (Vec<(T,T)>, T)) -> Self {
         let items: Vec<DefaultItem<T>> = input.0.into_iter().map(|(cost, weight)| DefaultItem::from((cost, weight))).collect();
         Instance {
@@ -85,7 +85,7 @@ impl <T> From<(Vec<(T,T)>, T)> for Instance<DefaultItem<T>> where T: Add + Sum +
     }
 }
 
-impl <T> From<(T, T)> for DefaultItem<T> where T: Add + Sum + PartialEq + Copy {
+impl <T> From<(T, T)> for DefaultItem<T> where T: Add + Sum + PartialEq  {
     fn from(input: (T, T)) -> Self {
         DefaultItem {
             cost: input.0,
@@ -94,7 +94,7 @@ impl <T> From<(T, T)> for DefaultItem<T> where T: Add + Sum + PartialEq + Copy {
     }
 }
 
-impl Reduction<MathProgram> for Instance<DefaultItem<f32>> {
+impl <'a> Reduction<MathProgram> for &'a Instance<DefaultItem<f32>> {
     fn reduce_instance(&self) -> MathProgram {
         let mut model = LpProblem::new("knapsack", LpObjective::Maximize);
         let vars: Vec<(&DefaultItem<f32>, LpBinary)> = self.items.iter().enumerate().map(|(index, item)| (item, LpBinary::new(&format!("x_{}", index)))).collect();
@@ -107,13 +107,13 @@ impl Reduction<MathProgram> for Instance<DefaultItem<f32>> {
         model.into()
     }
 
-    fn reduce_solution(&self, solution: &LpSolution) -> Solution<DefaultItem<f32>>  {
+    fn reduce_solution(&self, solution: &LpSolution) -> Solution<&'a DefaultItem<f32>>  {
         match solution {
             LpSolution::Failed(msg) => Solution::Failed(String::from(msg)),
             LpSolution::Infeasible => Solution::Infeasible,
             LpSolution::Unbounded => panic!("LP solution unbounded for knapsack instance. This should not happen!"),
             LpSolution::Solved { vars, .. } => {
-                let packed = self.items.iter().enumerate().filter(|(index, _)| *vars.get(&format!("x_{}", index)).unwrap() == 1.0).map(|(_, &item)| item).collect();
+                let packed = self.items.iter().enumerate().filter(|(index, _)| *vars.get(&format!("x_{}", index)).unwrap() == 1.0).map(|(_, item)| item).collect();
                 Solution::Solved {
                     packed_items: packed
                 }
@@ -132,12 +132,12 @@ mod tests {
     fn build_instance_from_works() {
         let instance = Instance::from((vec![(1,2),(2,3),(3,4)], 5));
         assert_eq!(3, instance.number_of_items());
-        assert_eq!(5, instance.size());
+        assert_eq!(5, *instance.bag_size());
     }
 
     #[test]
     fn reduction_works() {
-        let instance = Instance::from((vec![(1.0,2.0),(2.0,3.0),(2.0, 4.0)], 5.0));
+        let instance = &Instance::from((vec![(1.0,2.0),(2.0,3.0),(2.0, 4.0)], 5.0));
         let program = instance.reduce_instance();
         assert_eq!(3, program.number_of_variables());
         assert_eq!(1, program.number_of_constraints());
@@ -145,11 +145,11 @@ mod tests {
 
     #[test]
     fn solving_by_reduction_works() {
-        let instance = Instance::from((vec![(1.0,2.0),(2.0,3.0),(2.0, 4.0)], 5.0));
+        let instance = &Instance::from((vec![(1.0,2.0),(2.0,3.0),(2.0, 4.0)], 5.0));
         let solution = instance.solve_by_reduction(&LpSolver::CBC);       
         assert!(solution.is_solved());
         let items = solution.as_solution().unwrap();
-        assert_eq!(items, vec![DefaultItem::from((1.0, 2.0)), DefaultItem::from((2.0,3.0))])
+        assert_eq!(items, vec![&DefaultItem::from((1.0, 2.0)), &DefaultItem::from((2.0,3.0))])
     }
 }
 
