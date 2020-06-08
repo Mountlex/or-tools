@@ -124,11 +124,11 @@ where
 }
 
 pub struct FPTAS {
-    eps: f64,
+    eps: f32,
 }
 
 impl FPTAS {
-    fn new(eps: f64) -> Self {
+    fn new(eps: f32) -> Self {
         FPTAS { eps }
     }
 }
@@ -147,7 +147,7 @@ where
             .unwrap())
         .into();
 
-        let k = self.eps * (highest_cost / instance.number_of_items() as f64);
+        let k = self.eps as f64 * (highest_cost / instance.number_of_items() as f64);
 
         let updated_items: Vec<DefaultItem<i32>> = instance
             .items()
@@ -160,6 +160,30 @@ where
 
         let updated_instance = Instance::new(updated_items, *instance.bag_size());
         updated_instance.run(SimpleDP)
+    }
+}
+
+impl<I, C> TheoreticValidation<Instance<I, C, i32>> for FPTAS
+where
+    I: Item<C, i32>,
+    C: Numeric + Into<f64>,
+{
+    fn validate(&self, instance: &Instance<I, C, i32>, solution: &Solution) -> TheoreticGuarantee {
+        let optimal_solution = instance.run(SimpleDP);
+        match (solution.cost(instance), optimal_solution.cost(instance)) {
+            (Some(alg), Some(opt)) => {
+                if (alg.into() as f64) < (1.0 - self.eps) as f64 * opt.into() {
+                    TheoreticGuarantee::Inconsistent(
+                        format!("FPTAS (eps = {}) did not achieve its theoretical approximation ratio: {} < {} * {}", self.eps, alg, 1.0 - self.eps, opt),
+                    )
+                } else {
+                    TheoreticGuarantee::Consistent
+                }
+            }
+            _ => TheoreticGuarantee::Failed(format!(
+                "Error: Cost of optimal solution and algorithm could not have been computed!"
+            )),
+        }
     }
 }
 
@@ -207,5 +231,19 @@ mod test_super {
         assert!(solution.is_solved());
         let items = solution.as_solution().unwrap();
         assert_eq!(items, vec![1, 2])
+    }
+
+    #[test]
+    fn random_validation_fptas_alg() {
+        let mut rng = thread_rng();
+        let costs: Vec<i32> = rng.sample_iter(Uniform::new(0, 100)).take(30).collect();
+        let weights: Vec<i32> = rng.sample_iter(Uniform::new(1, 100)).take(30).collect();
+        let size: i32 = rng.sample(Uniform::new(400, 700));
+        let eps: f32 = rng.sample(Uniform::new(0.05, 0.95));
+        let instance = Instance::from((costs.into_iter().zip(weights.into_iter()).collect(), size));
+        let solution = instance.run(FPTAS::new(eps));
+        assert!(solution.is_solved());
+        let validation = FPTAS::new(eps).validate(&instance, &solution);
+        assert!(validation.is_correct());
     }
 }
