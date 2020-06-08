@@ -173,6 +173,18 @@ where
     }
 }
 
+impl<T> From<(Vec<T>, Vec<T>, T)> for Instance<DefaultItem<T>, T, T>
+where
+    T: Numeric,
+{
+    fn from(input: (Vec<T>, Vec<T>, T)) -> Self {
+        Instance::from((
+            input.0.into_iter().zip(input.1.into_iter()).collect(),
+            input.2,
+        ))
+    }
+}
+
 impl<T> From<(T, T)> for DefaultItem<T>
 where
     T: Numeric,

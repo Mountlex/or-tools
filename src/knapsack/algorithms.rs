@@ -207,7 +207,7 @@ mod test_super {
         let costs: Vec<u32> = rng.sample_iter(Uniform::new(0, 100)).take(30).collect();
         let weights: Vec<u32> = rng.sample_iter(Uniform::new(1, 100)).take(30).collect();
         let size = rng.sample(Uniform::new(400, 700));
-        let instance = Instance::from((costs.into_iter().zip(weights.into_iter()).collect(), size));
+        let instance = Instance::from((costs, weights, size));
         let solution = instance.run(Greedy);
         assert!(solution.is_solved());
         let validation = Greedy.validate(&instance, &solution);
@@ -229,7 +229,7 @@ mod test_super {
         let costs: Vec<u32> = rng.sample_iter(Uniform::new(0, 100)).take(30).collect();
         let weights: Vec<u32> = rng.sample_iter(Uniform::new(1, 100)).take(30).collect();
         let size: u32 = rng.sample(Uniform::new(400, 700));
-        let instance = Instance::from((costs.into_iter().zip(weights.into_iter()).collect(), size));
+        let instance = Instance::from((costs, weights, size));
         let dp_solution = instance.run(SimpleDP);
         let ilp_solution = instance.solve_by_reduction(&LpSolver::CBC);
         assert!(dp_solution.is_solved());
@@ -253,7 +253,7 @@ mod test_super {
         let weights: Vec<u32> = rng.sample_iter(Uniform::new(1, 100)).take(30).collect();
         let size: u32 = rng.sample(Uniform::new(400, 700));
         let eps: f64 = rng.sample(Uniform::new(0.05, 0.95));
-        let instance = Instance::from((costs.into_iter().zip(weights.into_iter()).collect(), size));
+        let instance = Instance::from((costs, weights, size));
         let solution = instance.run(FPTAS::new(eps));
         assert!(solution.is_solved());
         let validation = FPTAS::new(eps).validate(&instance, &solution);
