@@ -1,7 +1,9 @@
-use crate::algorithm::Algorithm;
+use crate::algorithm::*;
 use crate::knapsack::{DefaultItem, Instance, Item, Solution};
 use crate::primitives::Numeric;
-use crate::problem::OptProblemKind;
+use crate::problem::{OptProblemKind, SolutionKind};
+use crate::program::LpSolver;
+use crate::reduction::Reduction;
 
 macro_rules! max {
     ($x: expr) => ($x);
@@ -17,30 +19,64 @@ macro_rules! max {
 
 pub struct Greedy;
 
-impl<I> Algorithm<Instance<I, f64, f64>> for Greedy
+impl<I> Algorithm<Instance<I, f32, f32>> for Greedy
 where
-    I: Item<f64, f64>,
+    I: Item<f32, f32>,
 {
-    fn run(&self, instance: &Instance<I, f64, f64>) -> Solution {
+    fn run(&self, instance: &Instance<I, f32, f32>) -> Solution {
         let mut indexed_items: Vec<(usize, &I)> = instance.items().iter().enumerate().collect();
         indexed_items.sort_by(|(_, b), (_, a)| {
             (a.cost() / a.weight())
                 .partial_cmp(&(b.cost() / b.weight()))
                 .unwrap()
         });
-        let mut weight: f64 = 0.0;
+        let mut weight: f32 = 0.0;
+        let mut next: usize = 0;
         let mut packed: Vec<usize> = Vec::new();
         for (index, item) in indexed_items {
-            weight += item.weight();
-            if weight > (*instance.bag_size()) {
+            if weight + item.weight() > (*instance.bag_size()) {
+                next = index;
                 break;
             } else {
+                weight += item.weight();
                 packed.push(index);
             }
         }
         packed.sort();
-        Solution::Solved {
-            packed_items: packed,
+
+        if packed.len() == instance.number_of_items() || weight > *instance.items()[next].weight() {
+            Solution::Solved {
+                packed_items: packed,
+            }
+        } else {
+            Solution::Solved {
+                packed_items: vec![next],
+            }
+        }
+    }
+}
+
+impl<I> TheoreticValidation<Instance<I, f32, f32>> for Greedy
+where
+    I: Item<f32, f32>,
+{
+    fn validate(
+        &self,
+        instance: &Instance<I, f32, f32>,
+        solution: &Solution,
+    ) -> TheoreticGuarantee {
+        let optimal_solution = instance.solve_by_reduction(&LpSolver::CBC);
+        match (solution.cost(instance), optimal_solution.cost(instance)) {
+            (Some(alg), Some(opt)) => {
+                if alg < 0.5 * opt {
+                    TheoreticGuarantee::Inconsistent(format!("Greedy algorithm did not achieve its theoretical approximation ratio: {} < 0.5 * {}", alg, opt))
+                } else {
+                    TheoreticGuarantee::Consistent
+                }
+            }
+            _ => TheoreticGuarantee::Failed(format!(
+                "Error: Cost of optimal solution and algorithm could not have been computed!"
+            )),
         }
     }
 }
@@ -96,6 +132,7 @@ impl FPTAS {
         FPTAS { eps }
     }
 }
+
 impl<I, C> Algorithm<Instance<I, C, i32>> for FPTAS
 where
     I: Item<C, i32>,
@@ -129,7 +166,8 @@ where
 #[cfg(test)]
 mod test_super {
     use super::*;
-    use crate::problem::OptProblemKind;
+    use rand::distributions::Uniform;
+    use rand::{thread_rng, Rng};
 
     #[test]
     fn solving_by_greedy_works() {
@@ -138,6 +176,19 @@ mod test_super {
         assert!(solution.is_solved());
         let items = solution.as_solution().unwrap();
         assert_eq!(items, vec![1, 2])
+    }
+
+    #[test]
+    fn random_validation_greedy_alg() {
+        let mut rng = thread_rng();
+        let costs: Vec<f32> = rng.sample_iter(Uniform::new(0.0, 100.0)).take(30).collect();
+        let weights: Vec<f32> = rng.sample_iter(Uniform::new(1.0, 100.0)).take(30).collect();
+        let size = rng.sample(Uniform::new(400.0, 700.0));
+        let instance = Instance::from((costs.into_iter().zip(weights.into_iter()).collect(), size));
+        let solution = instance.run(Greedy);
+        assert!(solution.is_solved());
+        let validation = Greedy.validate(&instance, &solution);
+        assert!(validation.is_correct());
     }
 
     #[test]

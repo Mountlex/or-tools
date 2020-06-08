@@ -8,5 +8,4 @@ edition = "2018"
 
 [dependencies]
 lp-modeler = { git = "https://github.com/jcavat/rust-lp-modeler" }
-ordered-float = "1.0.2"
-
+rand = "0.7.3"

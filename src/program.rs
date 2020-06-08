@@ -42,7 +42,7 @@ pub enum LpSolution {
 }
 
 impl SolutionKind<MathProgram> for LpSolution {
-    fn cost(&self, instance: &MathProgram) -> Option<f32> {
+    fn cost(&self, _: &MathProgram) -> Option<f32> {
         match self {
             LpSolution::Solved { value, .. } => *value,
             _ => None,
