@@ -8,8 +8,8 @@ use lp_modeler::dsl::*;
 impl<I, C, W> Reduction<MathProgram> for Instance<I, C, W>
 where
     I: Item<C, W>,
-    C: Numeric + Into<f64>,
-    W: Numeric + Into<f64>,
+    C: Numeric,
+    W: Numeric,
 {
     fn reduce_instance(&self) -> MathProgram {
         let mut model = LpProblem::new("knapsack", LpObjective::Maximize);

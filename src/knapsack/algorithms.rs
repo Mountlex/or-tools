@@ -19,26 +19,28 @@ macro_rules! max {
 
 pub struct Greedy;
 
-impl<I> Algorithm<Instance<I, f32, f32>> for Greedy
+impl<I, C, W> Algorithm<Instance<I, C, W>> for Greedy
 where
-    I: Item<f32, f32>,
+    I: Item<C, W>,
+    C: Numeric,
+    W: Numeric,
 {
-    fn run(&self, instance: &Instance<I, f32, f32>) -> Solution {
+    fn run(&self, instance: &Instance<I, C, W>) -> Solution {
         let mut indexed_items: Vec<(usize, &I)> = instance.items().iter().enumerate().collect();
         indexed_items.sort_by(|(_, b), (_, a)| {
-            (a.cost() / a.weight())
-                .partial_cmp(&(b.cost() / b.weight()))
+            ((*a.cost()).into() / (*a.weight()).into())
+                .partial_cmp(&((*b.cost()).into() / (*b.weight()).into()))
                 .unwrap()
         });
-        let mut weight: f32 = 0.0;
+        let mut weight: W = W::zero();
         let mut next: usize = 0;
         let mut packed: Vec<usize> = Vec::new();
         for (index, item) in indexed_items {
-            if weight + item.weight() > (*instance.bag_size()) {
+            if weight + *item.weight() > (*instance.bag_size()) {
                 next = index;
                 break;
             } else {
-                weight += item.weight();
+                weight += *item.weight();
                 packed.push(index);
             }
         }
@@ -56,19 +58,17 @@ where
     }
 }
 
-impl<I> TheoreticValidation<Instance<I, f32, f32>> for Greedy
+impl<I, C, W> TheoreticValidation<Instance<I, C, W>> for Greedy
 where
-    I: Item<f32, f32>,
+    I: Item<C, W>,
+    C: Numeric,
+    W: Numeric,
 {
-    fn validate(
-        &self,
-        instance: &Instance<I, f32, f32>,
-        solution: &Solution,
-    ) -> TheoreticGuarantee {
+    fn validate(&self, instance: &Instance<I, C, W>, solution: &Solution) -> TheoreticGuarantee {
         let optimal_solution = instance.solve_by_reduction(&LpSolver::CBC);
         match (solution.cost(instance), optimal_solution.cost(instance)) {
             (Some(alg), Some(opt)) => {
-                if alg < 0.5 * opt {
+                if alg.into() < 0.5 * opt.into() {
                     TheoreticGuarantee::Inconsistent(format!("Greedy algorithm did not achieve its theoretical approximation ratio: {} < 0.5 * {}", alg, opt))
                 } else {
                     TheoreticGuarantee::Consistent
@@ -83,12 +83,12 @@ where
 
 pub struct SimpleDP;
 
-impl<I, C> Algorithm<Instance<I, C, i32>> for SimpleDP
+impl<I, C> Algorithm<Instance<I, C, u32>> for SimpleDP
 where
-    I: Item<C, i32>,
+    I: Item<C, u32>,
     C: Numeric,
 {
-    fn run(&self, instance: &Instance<I, C, i32>) -> Solution {
+    fn run(&self, instance: &Instance<I, C, u32>) -> Solution {
         let mut values = vec![
             vec![C::zero(); (*instance.bag_size() + 1) as usize];
             instance.number_of_items() + 1
@@ -124,36 +124,35 @@ where
 }
 
 pub struct FPTAS {
-    eps: f32,
+    eps: f64,
 }
 
 impl FPTAS {
-    fn new(eps: f32) -> Self {
+    fn new(eps: f64) -> Self {
         FPTAS { eps }
     }
 }
 
-impl<I, C> Algorithm<Instance<I, C, i32>> for FPTAS
+impl<I, C> Algorithm<Instance<I, C, u32>> for FPTAS
 where
-    I: Item<C, i32>,
-    C: Numeric + Into<f64>,
+    I: Item<C, u32>,
+    C: Numeric,
 {
-    fn run(&self, instance: &Instance<I, C, i32>) -> Solution {
-        let highest_cost: f64 = (instance
+    fn run(&self, instance: &Instance<I, C, u32>) -> Solution {
+        let highest_cost: C = instance
             .items()
             .iter()
             .map(|item| *item.cost())
             .max_by(|a, b| a.partial_cmp(&b).unwrap())
-            .unwrap())
-        .into();
+            .unwrap();
 
-        let k = self.eps as f64 * (highest_cost / instance.number_of_items() as f64);
+        let k = self.eps * (highest_cost.into() / instance.number_of_items() as f64);
 
-        let updated_items: Vec<DefaultItem<i32>> = instance
+        let updated_items: Vec<DefaultItem<u32>> = instance
             .items()
             .iter()
             .map(|item| DefaultItem {
-                cost: ((*item.cost()).into() / k).floor() as i32,
+                cost: ((*item.cost()).into() / k).floor() as u32,
                 weight: *item.weight(),
             })
             .collect();
@@ -163,16 +162,16 @@ where
     }
 }
 
-impl<I, C> TheoreticValidation<Instance<I, C, i32>> for FPTAS
+impl<I, C> TheoreticValidation<Instance<I, C, u32>> for FPTAS
 where
-    I: Item<C, i32>,
-    C: Numeric + Into<f64>,
+    I: Item<C, u32>,
+    C: Numeric,
 {
-    fn validate(&self, instance: &Instance<I, C, i32>, solution: &Solution) -> TheoreticGuarantee {
+    fn validate(&self, instance: &Instance<I, C, u32>, solution: &Solution) -> TheoreticGuarantee {
         let optimal_solution = instance.run(SimpleDP);
         match (solution.cost(instance), optimal_solution.cost(instance)) {
             (Some(alg), Some(opt)) => {
-                if (alg.into() as f64) < (1.0 - self.eps) as f64 * opt.into() {
+                if alg.into() < (1.0 - self.eps) * opt.into() {
                     TheoreticGuarantee::Inconsistent(
                         format!("FPTAS (eps = {}) did not achieve its theoretical approximation ratio: {} < {} * {}", self.eps, alg, 1.0 - self.eps, opt),
                     )
@@ -195,7 +194,7 @@ mod test_super {
 
     #[test]
     fn solving_by_greedy_works() {
-        let instance = Instance::from((vec![(1.0, 2.0), (2.0, 3.0), (2.0, 1.0)], 5.0));
+        let instance = Instance::from((vec![(1, 2), (2, 3), (2, 1)], 5));
         let solution = instance.run(Greedy);
         assert!(solution.is_solved());
         let items = solution.as_solution().unwrap();
@@ -205,9 +204,9 @@ mod test_super {
     #[test]
     fn random_validation_greedy_alg() {
         let mut rng = thread_rng();
-        let costs: Vec<f32> = rng.sample_iter(Uniform::new(0.0, 100.0)).take(30).collect();
-        let weights: Vec<f32> = rng.sample_iter(Uniform::new(1.0, 100.0)).take(30).collect();
-        let size = rng.sample(Uniform::new(400.0, 700.0));
+        let costs: Vec<u32> = rng.sample_iter(Uniform::new(0, 100)).take(30).collect();
+        let weights: Vec<u32> = rng.sample_iter(Uniform::new(1, 100)).take(30).collect();
+        let size = rng.sample(Uniform::new(400, 700));
         let instance = Instance::from((costs.into_iter().zip(weights.into_iter()).collect(), size));
         let solution = instance.run(Greedy);
         assert!(solution.is_solved());
@@ -227,9 +226,9 @@ mod test_super {
     #[test]
     fn random_validation_simple_dp_alg() {
         let mut rng = thread_rng();
-        let costs: Vec<i32> = rng.sample_iter(Uniform::new(0, 100)).take(30).collect();
-        let weights: Vec<i32> = rng.sample_iter(Uniform::new(1, 100)).take(30).collect();
-        let size: i32 = rng.sample(Uniform::new(400, 700));
+        let costs: Vec<u32> = rng.sample_iter(Uniform::new(0, 100)).take(30).collect();
+        let weights: Vec<u32> = rng.sample_iter(Uniform::new(1, 100)).take(30).collect();
+        let size: u32 = rng.sample(Uniform::new(400, 700));
         let instance = Instance::from((costs.into_iter().zip(weights.into_iter()).collect(), size));
         let dp_solution = instance.run(SimpleDP);
         let ilp_solution = instance.solve_by_reduction(&LpSolver::CBC);
@@ -250,10 +249,10 @@ mod test_super {
     #[test]
     fn random_validation_fptas_alg() {
         let mut rng = thread_rng();
-        let costs: Vec<i32> = rng.sample_iter(Uniform::new(0, 100)).take(30).collect();
-        let weights: Vec<i32> = rng.sample_iter(Uniform::new(1, 100)).take(30).collect();
-        let size: i32 = rng.sample(Uniform::new(400, 700));
-        let eps: f32 = rng.sample(Uniform::new(0.05, 0.95));
+        let costs: Vec<u32> = rng.sample_iter(Uniform::new(0, 100)).take(30).collect();
+        let weights: Vec<u32> = rng.sample_iter(Uniform::new(1, 100)).take(30).collect();
+        let size: u32 = rng.sample(Uniform::new(400, 700));
+        let eps: f64 = rng.sample(Uniform::new(0.05, 0.95));
         let instance = Instance::from((costs.into_iter().zip(weights.into_iter()).collect(), size));
         let solution = instance.run(FPTAS::new(eps));
         assert!(solution.is_solved());
