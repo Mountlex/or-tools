@@ -24,4 +24,8 @@ where
     V: OptProblemKind,
 {
     fn validate(&self, instance: &V, solution: &V::Solution) -> TheoreticGuarantee;
+
+    fn is_correct(&self, instance: &V, solution: &V::Solution) -> bool {
+        self.validate(instance, solution).is_correct()
+    }
 }

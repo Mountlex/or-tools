@@ -210,8 +210,7 @@ mod test_super {
         let instance = Instance::from((costs, weights, size));
         let solution = instance.run(Greedy);
         assert!(solution.is_solved());
-        let validation = Greedy.validate(&instance, &solution);
-        assert!(validation.is_correct());
+        assert!(Greedy.is_correct(&instance, &solution));
     }
 
     #[test]
@@ -256,7 +255,6 @@ mod test_super {
         let instance = Instance::from((costs, weights, size));
         let solution = instance.run(FPTAS::new(eps));
         assert!(solution.is_solved());
-        let validation = FPTAS::new(eps).validate(&instance, &solution);
-        assert!(validation.is_correct());
+        assert!(FPTAS::new(eps).is_correct(&instance, &solution));
     }
 }
