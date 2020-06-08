@@ -6,28 +6,9 @@ pub trait Zero {
     fn zero() -> Self;
 }
 
-pub trait Numeric: Display + Clone + Into<f64> + Into<f64> {}
+pub trait NumericKind: Clone + Copy + Display + Into<f64> {}
 
-impl Zero for f32 {
-    fn zero() -> f32 {
-        0.0
-    }
-}
-impl Zero for f64 {
-    fn zero() -> f64 {
-        0.0
-    }
-}
-impl Zero for i32 {
-    fn zero() -> i32 {
-        0
-    }
-}
-impl Zero for i64 {
-    fn zero() -> i64 {
-        0
-    }
-}
-
-impl Numeric for f32 {}
-impl Numeric for i32 {}
+impl NumericKind for f32 {}
+impl NumericKind for i32 {}
+impl NumericKind for f64 {}
+impl NumericKind for i16 {}

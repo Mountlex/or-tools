@@ -1,4 +1,4 @@
-use crate::primitives::Numeric;
+use crate::primitives::NumericKind;
 use crate::problem::OptProblemKind;
 use std::fmt::Display;
 
@@ -98,7 +98,7 @@ pub trait Item: Display + Clone {
 #[derive(Debug, PartialEq, Clone)]
 pub struct DefaultItem<T>
 where
-    T: Clone + Copy + Into<f64>,
+    T: NumericKind,
 {
     cost: T,
     weight: T,
@@ -106,7 +106,7 @@ where
 
 impl<T> Display for DefaultItem<T>
 where
-    T: Clone + Copy + Display + Into<f64>,
+    T: NumericKind,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Item[c = {}, w = {}]", self.cost, self.weight)
@@ -115,7 +115,7 @@ where
 
 impl<T> Item for DefaultItem<T>
 where
-    T: Clone + Copy + Display + Into<f64>,
+    T: NumericKind,
 {
     fn weight(&self) -> f64 {
         self.weight.into()
@@ -127,7 +127,7 @@ where
 
 impl<T> From<(Vec<(T, T)>, T)> for Instance<DefaultItem<T>>
 where
-    T: Clone + Copy + Display + Into<f64>,
+    T: NumericKind,
 {
     fn from(input: (Vec<(T, T)>, T)) -> Self {
         let items: Vec<DefaultItem<T>> = input
@@ -141,7 +141,7 @@ where
 
 impl<T> From<(T, T)> for DefaultItem<T>
 where
-    T: Clone + Copy + Display + Into<f64>,
+    T: NumericKind,
 {
     fn from(input: (T, T)) -> Self {
         DefaultItem {
