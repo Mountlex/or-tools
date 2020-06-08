@@ -26,8 +26,8 @@ where
         }
     }
 
-    pub fn items(&self) -> Vec<I> {
-        self.items.clone()
+    pub fn items(&self) -> &[I] {
+        &self.items
     }
 
     pub fn number_of_items(&self) -> usize {
