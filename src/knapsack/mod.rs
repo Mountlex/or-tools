@@ -1,30 +1,37 @@
-use crate::primitives::NumericKind;
+use crate::primitives::Numeric;
 use crate::problem::OptProblemKind;
 use std::fmt::Display;
+use std::marker::PhantomData;
 
 pub mod algorithms;
 pub mod reductions;
 
 #[derive(Clone, Debug)]
-pub struct Instance<I>
+pub struct Instance<I, C, W>
 where
-    I: Item,
+    I: Item<C, W>,
+    C: Numeric,
+    W: Numeric,
 {
     items: Vec<I>,
-    size: f64,
+    size: W,
+    cost_type: PhantomData<C>,
 }
 
-impl<I> Instance<I>
+impl<I, C, W> Instance<I, C, W>
 where
-    I: Item,
+    I: Item<C, W>,
+    C: Numeric,
+    W: Numeric,
 {
-    pub fn new(items: Vec<I>, size: f64) -> Self {
-        if items.iter().any(|item| item.weight() <= 0.0) {
-            panic!("Item weights must be positive!");
-        }
+    pub fn new(items: Vec<I>, size: W) -> Self {
+        //if items.iter().any(|item| item.weight() <= 0.0) {
+        //    panic!("Item weights must be positive!");
+        //}
         Instance {
             items: items,
             size: size,
+            cost_type: PhantomData,
         }
     }
 
@@ -36,14 +43,16 @@ where
         self.items.len()
     }
 
-    pub fn bag_size(&self) -> &f64 {
+    pub fn bag_size(&self) -> &W {
         &self.size
     }
 }
 
-impl<I> Display for Instance<I>
+impl<I, C, W> Display for Instance<I, C, W>
 where
-    I: Item,
+    I: Item<C, W>,
+    C: Numeric,
+    W: Numeric,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
@@ -59,12 +68,14 @@ where
     }
 }
 
-impl<I> OptProblemKind for Instance<I>
+impl<I, C, W> OptProblemKind for Instance<I, C, W>
 where
-    I: Item,
+    I: Item<C, W>,
+    C: Numeric,
+    W: Numeric,
 {
     type SolutionKind = Solution;
-    type Cost = f64;
+    type Cost = C;
 }
 
 #[derive(Clone, Debug)]
@@ -90,15 +101,19 @@ impl Solution {
     }
 }
 
-pub trait Item: Display + Clone {
-    fn weight(&self) -> f64;
-    fn cost(&self) -> f64;
+pub trait Item<C, W>: Display + Clone
+where
+    C: Numeric,
+    W: Numeric,
+{
+    fn weight(&self) -> &W;
+    fn cost(&self) -> &C;
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DefaultItem<T>
 where
-    T: NumericKind,
+    T: Numeric,
 {
     cost: T,
     weight: T,
@@ -106,28 +121,28 @@ where
 
 impl<T> Display for DefaultItem<T>
 where
-    T: NumericKind,
+    T: Numeric,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Item[c = {}, w = {}]", self.cost, self.weight)
     }
 }
 
-impl<T> Item for DefaultItem<T>
+impl<T> Item<T, T> for DefaultItem<T>
 where
-    T: NumericKind,
+    T: Numeric,
 {
-    fn weight(&self) -> f64 {
-        self.weight.into()
+    fn weight(&self) -> &T {
+        &self.weight
     }
-    fn cost(&self) -> f64 {
-        self.cost.into()
+    fn cost(&self) -> &T {
+        &self.cost
     }
 }
 
-impl<T> From<(Vec<(T, T)>, T)> for Instance<DefaultItem<T>>
+impl<T> From<(Vec<(T, T)>, T)> for Instance<DefaultItem<T>, T, T>
 where
-    T: NumericKind,
+    T: Numeric,
 {
     fn from(input: (Vec<(T, T)>, T)) -> Self {
         let items: Vec<DefaultItem<T>> = input
@@ -135,13 +150,13 @@ where
             .into_iter()
             .map(|(cost, weight)| DefaultItem::from((cost, weight)))
             .collect();
-        Instance::new(items, input.1.into())
+        Instance::new(items, input.1)
     }
 }
 
 impl<T> From<(T, T)> for DefaultItem<T>
 where
-    T: NumericKind,
+    T: Numeric,
 {
     fn from(input: (T, T)) -> Self {
         DefaultItem {
@@ -161,6 +176,6 @@ mod tests {
     fn build_instance_from_works() {
         let instance = Instance::from((vec![(1, 2), (2, 3), (3, 4)], 5));
         assert_eq!(3, instance.number_of_items());
-        assert_eq!(5.0, *instance.bag_size());
+        assert_eq!(5, *instance.bag_size());
     }
 }

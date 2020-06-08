@@ -1,12 +1,12 @@
-use crate::knapsack::{DefaultItem, Instance, Item, Solution};
+use crate::knapsack::{Instance, Item, Solution};
 use crate::program::{LpSolution, MathProgram};
 use crate::reduction::Reduction;
 
 use lp_modeler::dsl::*;
 
-impl<I> Reduction<MathProgram> for Instance<I>
+impl<I> Reduction<MathProgram> for Instance<I, f32, f32>
 where
-    I: Item,
+    I: Item<f32, f32>,
 {
     fn reduce_instance(&self) -> MathProgram {
         let mut model = LpProblem::new("knapsack", LpObjective::Maximize);
@@ -17,13 +17,11 @@ where
             .map(|(index, item)| (item, LpBinary::new(&format!("x_{}", index))))
             .collect();
 
-        let obj_vec: Vec<LpExpression> = vars
-            .iter()
-            .map(|(item, var)| item.cost() as f32 * var)
-            .collect();
+        let obj_vec: Vec<LpExpression> =
+            vars.iter().map(|(item, var)| *item.cost() * var).collect();
         model += obj_vec.sum();
 
-        model += sum(&vars, |(item, var)| item.weight() as f32 * var).le(self.size as f32);
+        model += sum(&vars, |(item, var)| *item.weight() * var).le(self.size);
 
         model.into()
     }
