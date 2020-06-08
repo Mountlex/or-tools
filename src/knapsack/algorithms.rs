@@ -225,6 +225,20 @@ mod test_super {
     }
 
     #[test]
+    fn random_validation_simple_dp_alg() {
+        let mut rng = thread_rng();
+        let costs: Vec<i32> = rng.sample_iter(Uniform::new(0, 100)).take(30).collect();
+        let weights: Vec<i32> = rng.sample_iter(Uniform::new(1, 100)).take(30).collect();
+        let size: i32 = rng.sample(Uniform::new(400, 700));
+        let instance = Instance::from((costs.into_iter().zip(weights.into_iter()).collect(), size));
+        let dp_solution = instance.run(SimpleDP);
+        let ilp_solution = instance.solve_by_reduction(&LpSolver::CBC);
+        assert!(dp_solution.is_solved());
+        assert!(ilp_solution.is_solved());
+        assert_eq!(ilp_solution.cost(&instance), dp_solution.cost(&instance));
+    }
+
+    #[test]
     fn solving_by_fptas_works() {
         let instance = Instance::from((vec![(1, 2), (2, 3), (2, 1)], 5));
         let solution = instance.run(FPTAS::new(0.5));
