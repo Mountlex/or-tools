@@ -1,5 +1,5 @@
 use crate::algorithm::Algorithm;
-use crate::problem::OptProblemKind;
+use crate::problem::{OptProblemKind, SolutionKind};
 use lp_modeler::dsl::LpProblem;
 use lp_modeler::solvers::{CbcSolver, GlpkSolver, Solution, SolverTrait, Status};
 use std::collections::HashMap;
@@ -16,7 +16,7 @@ impl MathProgram {
 }
 
 impl OptProblemKind for MathProgram {
-    type SolutionKind = LpSolution;
+    type Solution = LpSolution;
     type Cost = f32;
 }
 
@@ -25,7 +25,7 @@ pub enum LpSolver {
     GLPK,
 }
 
-pub enum SolutionKind {
+pub enum SolutionType {
     Optimal,
     SubOptimal,
 }
@@ -33,7 +33,7 @@ pub enum SolutionKind {
 pub enum LpSolution {
     Solved {
         vars: HashMap<String, f32>,
-        kind: SolutionKind,
+        kind: SolutionType,
         value: Option<f32>,
     },
     Infeasible,
@@ -41,16 +41,25 @@ pub enum LpSolution {
     Failed(String),
 }
 
+impl SolutionKind<MathProgram> for LpSolution {
+    fn cost(&self, instance: &MathProgram) -> Option<f32> {
+        match self {
+            LpSolution::Solved { value, .. } => *value,
+            _ => None,
+        }
+    }
+}
+
 impl From<&Solution<'_>> for LpSolution {
     fn from(solution: &Solution<'_>) -> Self {
         match solution.status {
             Status::Optimal => LpSolution::Solved {
-                kind: SolutionKind::Optimal,
+                kind: SolutionType::Optimal,
                 value: solution.eval(),
                 vars: solution.results.clone(),
             },
             Status::SubOptimal => LpSolution::Solved {
-                kind: SolutionKind::SubOptimal,
+                kind: SolutionType::SubOptimal,
                 value: solution.eval(),
                 vars: solution.results.clone(),
             },

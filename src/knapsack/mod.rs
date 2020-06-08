@@ -1,5 +1,5 @@
 use crate::primitives::Numeric;
-use crate::problem::OptProblemKind;
+use crate::problem::{OptProblemKind, SolutionKind};
 use std::fmt::Display;
 use std::marker::PhantomData;
 
@@ -25,9 +25,9 @@ where
     W: Numeric,
 {
     pub fn new(items: Vec<I>, size: W) -> Self {
-        //if items.iter().any(|item| item.weight() <= 0.0) {
-        //    panic!("Item weights must be positive!");
-        //}
+        if items.iter().any(|item| *item.weight() <= W::zero()) {
+            panic!("Item weights must be positive!");
+        }
         Instance {
             items: items,
             size: size,
@@ -74,7 +74,7 @@ where
     C: Numeric,
     W: Numeric,
 {
-    type SolutionKind = Solution;
+    type Solution = Solution;
     type Cost = C;
 }
 
@@ -97,6 +97,25 @@ impl Solution {
         match self {
             Solution::Solved { packed_items } => Some(packed_items),
             _ => None,
+        }
+    }
+}
+
+impl<I, C, W> SolutionKind<Instance<I, C, W>> for Solution
+where
+    I: Item<C, W>,
+    C: Numeric,
+    W: Numeric,
+{
+    fn cost(&self, instance: &Instance<I, C, W>) -> Option<C> {
+        match self {
+            Solution::Infeasible | Solution::Failed(_) => None,
+            Solution::Solved { packed_items } => Some(
+                packed_items
+                    .iter()
+                    .map(|&item| *instance.items()[item].cost())
+                    .sum(),
+            ),
         }
     }
 }

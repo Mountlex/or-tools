@@ -141,7 +141,7 @@ mod test_super {
     }
 
     #[test]
-    fn solving_by_dp_works() {
+    fn solving_by_simple_dp_works() {
         let instance = Instance::from((vec![(1, 2), (2, 3), (2, 1)], 5));
         let solution = instance.run(SimpleDP);
         assert!(solution.is_solved());
