@@ -4,7 +4,7 @@ use crate::reduction::Reduction;
 
 use lp_modeler::dsl::*;
 
-impl<'a> Reduction<MathProgram> for &'a Instance<DefaultItem<f32>> {
+impl Reduction<MathProgram> for Instance<DefaultItem<f32>> {
     fn reduce_instance(&self) -> MathProgram {
         let mut model = LpProblem::new("knapsack", LpObjective::Maximize);
         let vars: Vec<(&DefaultItem<f32>, LpBinary)> = self
@@ -23,7 +23,7 @@ impl<'a> Reduction<MathProgram> for &'a Instance<DefaultItem<f32>> {
         model.into()
     }
 
-    fn reduce_solution(&self, solution: &LpSolution) -> Solution<&'a DefaultItem<f32>> {
+    fn reduce_solution(&self, solution: &LpSolution) -> Solution {
         match solution {
             LpSolution::Failed(msg) => Solution::Failed(String::from(msg)),
             LpSolution::Infeasible => Solution::Infeasible,
@@ -36,7 +36,7 @@ impl<'a> Reduction<MathProgram> for &'a Instance<DefaultItem<f32>> {
                     .iter()
                     .enumerate()
                     .filter(|(index, _)| *vars.get(&format!("x_{}", index)).unwrap() == 1.0)
-                    .map(|(_, item)| item)
+                    .map(|(index, _)| index)
                     .collect();
                 Solution::Solved {
                     packed_items: packed,
@@ -65,12 +65,6 @@ mod test_super {
         let solution = instance.solve_by_reduction(&LpSolver::CBC);
         assert!(solution.is_solved());
         let items = solution.as_solution().unwrap();
-        assert_eq!(
-            items,
-            vec![
-                &DefaultItem::from((1.0, 2.0)),
-                &DefaultItem::from((2.0, 3.0))
-            ]
-        )
+        assert_eq!(items, vec![0, 1])
     }
 }

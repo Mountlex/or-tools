@@ -68,7 +68,7 @@ impl From<LpProblem> for MathProgram {
 }
 
 impl Algorithm<MathProgram> for LpSolver {
-    fn run(&self, instance: &MathProgram) -> LpSolution {
+    fn run(&self, instance: MathProgram) -> LpSolution {
         let result = match self {
             LpSolver::CBC => CbcSolver::new().run(&instance.0),
             LpSolver::GLPK => GlpkSolver::new().run(&instance.0),

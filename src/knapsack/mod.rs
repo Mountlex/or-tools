@@ -18,6 +18,18 @@ impl<I> Instance<I>
 where
     I: Item,
 {
+    pub fn new(items: Vec<I>, size: I::Weight) -> Self {
+        // TODO: Validation
+        Instance {
+            items: items,
+            size: size,
+        }
+    }
+
+    pub fn items(&self) -> Vec<I> {
+        self.items.clone()
+    }
+
     pub fn number_of_items(&self) -> usize {
         self.items.len()
     }
@@ -45,25 +57,22 @@ where
     }
 }
 
-impl<'a, I> OptProblemKind for &'a Instance<I>
+impl<I> OptProblemKind for Instance<I>
 where
     I: Item,
 {
-    type SolutionKind = Solution<&'a I>;
+    type SolutionKind = Solution;
     type Cost = I::Cost;
 }
 
 #[derive(Clone, Debug)]
-pub enum Solution<I> {
-    Solved { packed_items: Vec<I> },
+pub enum Solution {
+    Solved { packed_items: Vec<usize> },
     Infeasible,
     Failed(String),
 }
 
-impl<'a, I> Solution<&'a I>
-where
-    I: Item,
-{
+impl Solution {
     pub fn is_solved(&self) -> bool {
         match self {
             Solution::Solved { .. } => true,
@@ -71,7 +80,7 @@ where
         }
     }
 
-    pub fn as_solution(self) -> Option<Vec<&'a I>> {
+    pub fn as_solution(self) -> Option<Vec<usize>> {
         match self {
             Solution::Solved { packed_items } => Some(packed_items),
             _ => None,
@@ -79,7 +88,7 @@ where
     }
 }
 
-pub trait Item: Display {
+pub trait Item: Display + Clone {
     type Weight: Numeric;
     type Cost: Numeric;
 
@@ -130,10 +139,7 @@ where
             .into_iter()
             .map(|(cost, weight)| DefaultItem::from((cost, weight)))
             .collect();
-        Instance {
-            items: items,
-            size: input.1,
-        }
+        Instance::new(items, input.1)
     }
 }
 
