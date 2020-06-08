@@ -4,10 +4,13 @@ use crate::reduction::Reduction;
 
 use lp_modeler::dsl::*;
 
-impl Reduction<MathProgram> for Instance<DefaultItem<f32>> {
+impl<I> Reduction<MathProgram> for Instance<I>
+where
+    I: Item,
+{
     fn reduce_instance(&self) -> MathProgram {
         let mut model = LpProblem::new("knapsack", LpObjective::Maximize);
-        let vars: Vec<(&DefaultItem<f32>, LpBinary)> = self
+        let vars: Vec<(&I, LpBinary)> = self
             .items
             .iter()
             .enumerate()

@@ -1,5 +1,5 @@
 use crate::algorithm::Algorithm;
-use crate::knapsack::{DefaultItem, Instance, Item, Solution};
+use crate::knapsack::{Instance, Item, Solution};
 
 pub struct Greedy;
 

@@ -1,6 +1,4 @@
 use std::fmt::Display;
-use std::iter::Sum;
-use std::ops::{Add, Div};
 
 pub trait Zero {
     fn zero() -> Self;
