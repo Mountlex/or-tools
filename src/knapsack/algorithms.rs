@@ -3,20 +3,22 @@ use crate::knapsack::{DefaultItem, Instance, Item, Solution};
 
 pub struct Greedy;
 
-impl Algorithm<Instance<DefaultItem<f32>>> for Greedy {
-    fn run(&self, instance: &Instance<DefaultItem<f32>>) -> Solution {
-        let mut indexed_items: Vec<(usize, &DefaultItem<f32>)> =
-            instance.items().iter().enumerate().collect();
+impl<I> Algorithm<Instance<I>> for Greedy
+where
+    I: Item,
+{
+    fn run(&self, instance: &Instance<I>) -> Solution {
+        let mut indexed_items: Vec<(usize, &I)> = instance.items().iter().enumerate().collect();
         indexed_items.sort_by(|(_, b), (_, a)| {
             (a.cost() / a.weight())
                 .partial_cmp(&(b.cost() / b.weight()))
                 .unwrap()
         });
-        let mut weight = 0.0;
+        let mut weight: f64 = 0.0;
         let mut packed: Vec<usize> = Vec::new();
         for (index, item) in indexed_items {
             weight += item.weight();
-            if weight > *instance.bag_size() {
+            if weight > (*instance.bag_size()) {
                 break;
             } else {
                 packed.push(index);

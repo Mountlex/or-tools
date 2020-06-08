@@ -14,11 +14,13 @@ impl Reduction<MathProgram> for Instance<DefaultItem<f32>> {
             .map(|(index, item)| (item, LpBinary::new(&format!("x_{}", index))))
             .collect();
 
-        let obj_vec: Vec<LpExpression> =
-            vars.iter().map(|(item, var)| *item.cost() * var).collect();
+        let obj_vec: Vec<LpExpression> = vars
+            .iter()
+            .map(|(item, var)| item.cost() as f32 * var)
+            .collect();
         model += obj_vec.sum();
 
-        model += sum(&vars, |(item, var)| *item.weight() * var).le(self.size);
+        model += sum(&vars, |(item, var)| item.weight() as f32 * var).le(self.size as f32);
 
         model.into()
     }

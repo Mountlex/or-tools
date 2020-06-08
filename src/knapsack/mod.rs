@@ -11,15 +11,17 @@ where
     I: Item,
 {
     items: Vec<I>,
-    size: I::Weight,
+    size: f64,
 }
 
 impl<I> Instance<I>
 where
     I: Item,
 {
-    pub fn new(items: Vec<I>, size: I::Weight) -> Self {
-        // TODO: Validation
+    pub fn new(items: Vec<I>, size: f64) -> Self {
+        if items.iter().any(|item| item.weight() <= 0.0) {
+            panic!("Item weights must be positive!");
+        }
         Instance {
             items: items,
             size: size,
@@ -34,7 +36,7 @@ where
         self.items.len()
     }
 
-    pub fn bag_size(&self) -> &I::Weight {
+    pub fn bag_size(&self) -> &f64 {
         &self.size
     }
 }
@@ -62,7 +64,7 @@ where
     I: Item,
 {
     type SolutionKind = Solution;
-    type Cost = I::Cost;
+    type Cost = f64;
 }
 
 #[derive(Clone, Debug)]
@@ -89,17 +91,14 @@ impl Solution {
 }
 
 pub trait Item: Display + Clone {
-    type Weight: Numeric;
-    type Cost: Numeric;
-
-    fn weight(&self) -> &Self::Weight;
-    fn cost(&self) -> &Self::Cost;
+    fn weight(&self) -> f64;
+    fn cost(&self) -> f64;
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DefaultItem<T>
 where
-    T: Numeric,
+    T: Clone + Copy + Into<f64>,
 {
     cost: T,
     weight: T,
@@ -107,7 +106,7 @@ where
 
 impl<T> Display for DefaultItem<T>
 where
-    T: Numeric,
+    T: Clone + Copy + Display + Into<f64>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Item[c = {}, w = {}]", self.cost, self.weight)
@@ -116,22 +115,19 @@ where
 
 impl<T> Item for DefaultItem<T>
 where
-    T: Numeric,
+    T: Clone + Copy + Display + Into<f64>,
 {
-    type Weight = T;
-    type Cost = T;
-
-    fn weight(&self) -> &Self::Weight {
-        &self.weight
+    fn weight(&self) -> f64 {
+        self.weight.into()
     }
-    fn cost(&self) -> &Self::Cost {
-        &self.cost
+    fn cost(&self) -> f64 {
+        self.cost.into()
     }
 }
 
 impl<T> From<(Vec<(T, T)>, T)> for Instance<DefaultItem<T>>
 where
-    T: Numeric,
+    T: Clone + Copy + Display + Into<f64>,
 {
     fn from(input: (Vec<(T, T)>, T)) -> Self {
         let items: Vec<DefaultItem<T>> = input
@@ -139,13 +135,13 @@ where
             .into_iter()
             .map(|(cost, weight)| DefaultItem::from((cost, weight)))
             .collect();
-        Instance::new(items, input.1)
+        Instance::new(items, input.1.into())
     }
 }
 
 impl<T> From<(T, T)> for DefaultItem<T>
 where
-    T: Numeric,
+    T: Clone + Copy + Display + Into<f64>,
 {
     fn from(input: (T, T)) -> Self {
         DefaultItem {
@@ -165,6 +161,6 @@ mod tests {
     fn build_instance_from_works() {
         let instance = Instance::from((vec![(1, 2), (2, 3), (3, 4)], 5));
         assert_eq!(3, instance.number_of_items());
-        assert_eq!(5, *instance.bag_size());
+        assert_eq!(5.0, *instance.bag_size());
     }
 }
